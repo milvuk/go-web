@@ -1,9 +1,11 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 
+	_ "github.com/lib/pq"
 	"github.com/spf13/viper"
 )
 
@@ -17,14 +19,42 @@ func viperEnvVariable(key string) string {
 
 	value, ok := viper.Get(key).(string)
 	if !ok {
-		log.Fatalf("Invalid type assertion")
+		log.Fatal("Invalid type assertion")
 	}
 
 	return value
 }
 
-func main() {
-	value := viperEnvVariable("DB_PORT")
+func getDbHandle() *sql.DB {
+	host := viperEnvVariable("DB_HOST")
+	port := viperEnvVariable("DB_PORT")
+	user := viperEnvVariable("DB_USER")
+	pass := viperEnvVariable("DB_PASS")
+	dbname := viperEnvVariable("DB_NAME")
 
-	fmt.Println(value)
+	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		host, port, user, pass, dbname)
+
+	var err error
+
+	db, err := sql.Open("postgres", psqlInfo)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	pingErr := db.Ping()
+	if pingErr != nil {
+		log.Fatal(pingErr)
+	}
+	fmt.Println("DB Connected!")
+	return db
+}
+
+func main() {
+	db := getDbHandle()
+	alb, err := albumByID(db, 1)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(alb)
 }
