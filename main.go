@@ -46,7 +46,7 @@ func getDbHandle() *sql.DB {
 	if pingErr != nil {
 		log.Fatal(pingErr)
 	}
-	fmt.Println("DB Connected!")
+	log.Println("DB Connected!")
 	return db
 }
 
