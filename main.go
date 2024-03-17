@@ -52,9 +52,11 @@ func getDbHandle() *sql.DB {
 
 func main() {
 	db := getDbHandle()
-	alb, err := albumByID(db, 1)
-	if err != nil {
-		log.Fatal(err)
+
+	srv := APIServer{
+		listenAddr: "localhost:3000",
+		db:         db,
 	}
-	fmt.Println(alb)
+
+	srv.run()
 }
