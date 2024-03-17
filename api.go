@@ -21,7 +21,7 @@ type APIServer struct {
 
 func (s *APIServer) run() {
 	http.HandleFunc("GET /albums", s.getAlbumsHandler)
-	http.HandleFunc("GET /album/{id}", s.getAlbumHandler)
+	http.HandleFunc("GET /albums/{id}", s.getAlbumHandler)
 
 	log.Println("API server running at", s.listenAddr)
 	log.Fatal(http.ListenAndServe(s.listenAddr, nil))

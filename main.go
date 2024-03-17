@@ -53,8 +53,10 @@ func getDbHandle() *sql.DB {
 func main() {
 	db := getDbHandle()
 
+	listenAddr := viperEnvVariable("API_LISTEN_ADDR")
+
 	srv := APIServer{
-		listenAddr: "localhost:3000",
+		listenAddr: listenAddr,
 		db:         db,
 	}
 
