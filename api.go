@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -74,9 +75,16 @@ func (s *APIServer) postAlbumHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	alb.ID = insertId
+	w.Header().Set("Location", fmt.Sprintf("/albums/%d", insertId))
 
-	writeJson(w, http.StatusCreated, alb)
+	var createdAlb Album
+	createdAlb, err = albumByID(s.db, insertId)
+	if err != nil {
+		writeJson(w, http.StatusCreated, nil)
+		return
+	}
+
+	writeJson(w, http.StatusCreated, createdAlb)
 }
 
 func (s *APIServer) deleteAlbumHandler(w http.ResponseWriter, r *http.Request) {
@@ -126,5 +134,12 @@ func (s *APIServer) updateAlbumHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJson(w, http.StatusNoContent, "")
+	var updatedAlb Album
+	updatedAlb, err = albumByID(s.db, id)
+	if err != nil {
+		writeJson(w, http.StatusOK, nil)
+		return
+	}
+
+	writeJson(w, http.StatusOK, updatedAlb)
 }
