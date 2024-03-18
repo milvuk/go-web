@@ -83,13 +83,13 @@ func (s *APIServer) deleteAlbumHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "", http.StatusBadRequest)
 		return
 	}
-	rowsAffected, err := deleteAlbum(s.db, id)
+	err = deleteAlbum(s.db, id)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "Not found", http.StatusNotFound)
+			return
+		}
 		http.Error(w, "", http.StatusInternalServerError)
-		return
-	}
-	if rowsAffected == 0 {
-		http.Error(w, "Not found", http.StatusNotFound)
 		return
 	}
 	writeJson(w, http.StatusNoContent, "")
