@@ -24,6 +24,7 @@ func (s *APIServer) run() {
 	http.HandleFunc("GET /albums/{id}", s.getAlbumHandler)
 	http.HandleFunc("POST /albums", s.postAlbumHandler)
 	http.HandleFunc("DELETE /albums/{id}", s.deleteAlbumHandler)
+	http.HandleFunc("PUT /albums/{id}", s.updateAlbumHandler)
 
 	log.Println("API server running at", s.listenAddr)
 	log.Fatal(http.ListenAndServe(s.listenAddr, nil))
@@ -64,11 +65,13 @@ func (s *APIServer) postAlbumHandler(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&alb)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
 	insertId, err := addAlbum(s.db, alb)
 	if err != nil {
 		http.Error(w, "", http.StatusInternalServerError)
+		return
 	}
 
 	alb.ID = insertId
@@ -83,6 +86,7 @@ func (s *APIServer) deleteAlbumHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "", http.StatusBadRequest)
 		return
 	}
+
 	err = deleteAlbum(s.db, id)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -92,5 +96,35 @@ func (s *APIServer) deleteAlbumHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "", http.StatusInternalServerError)
 		return
 	}
+
+	writeJson(w, http.StatusNoContent, "")
+}
+
+func (s *APIServer) updateAlbumHandler(w http.ResponseWriter, r *http.Request) {
+	idString := r.PathValue("id")
+	id, err := strconv.ParseInt(idString, 10, 64)
+	if err != nil {
+		http.Error(w, "", http.StatusBadRequest)
+		return
+	}
+
+	var alb Album
+
+	err = json.NewDecoder(r.Body).Decode(&alb)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = updateAlbum(s.db, id, alb)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "Not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "", http.StatusInternalServerError)
+		return
+	}
+
 	writeJson(w, http.StatusNoContent, "")
 }

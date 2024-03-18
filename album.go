@@ -33,28 +33,6 @@ func albums(db *sql.DB) ([]Album, error) {
 	return albums, nil
 }
 
-func albumsByArtist(db *sql.DB, name string) ([]Album, error) {
-	var albums []Album
-
-	rows, err := db.Query("SELECT * FROM album WHERE artist = $1", name)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var alb Album
-		if err := rows.Scan(&alb.ID, &alb.Title, &alb.Artist, &alb.Price); err != nil {
-			return nil, err
-		}
-		albums = append(albums, alb)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return albums, nil
-}
-
 func albumByID(db *sql.DB, id int64) (Album, error) {
 	var alb Album
 
@@ -76,6 +54,24 @@ func addAlbum(db *sql.DB, alb Album) (int64, error) {
 
 func deleteAlbum(db *sql.DB, id int64) error {
 	res, err := db.Exec("DELETE FROM album WHERE id = $1", id)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+
+	return nil
+}
+
+func updateAlbum(db *sql.DB, id int64, alb Album) error {
+	res, err := db.Exec("UPDATE album SET title=$1, artist=$2, price=$3 WHERE id=$4",
+		alb.Title, alb.Artist, alb.Price, id)
 	if err != nil {
 		return err
 	}
