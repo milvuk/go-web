@@ -73,3 +73,17 @@ func addAlbum(db *sql.DB, alb Album) (int64, error) {
 	}
 	return id, nil
 }
+
+func deleteAlbum(db *sql.DB, id int64) (int64, error) {
+	res, err := db.Exec("DELETE FROM album WHERE id = $1", id)
+	if err != nil {
+		return 0, err
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+
+	return rowsAffected, err
+}

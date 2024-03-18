@@ -20,9 +20,10 @@ type APIServer struct {
 }
 
 func (s *APIServer) run() {
-	http.HandleFunc("GET /albums", s.getAlbumsHandler)
+	http.HandleFunc("GET /albums/", s.getAlbumsHandler)
 	http.HandleFunc("GET /albums/{id}", s.getAlbumHandler)
 	http.HandleFunc("POST /albums", s.postAlbumHandler)
+	http.HandleFunc("DELETE /albums/{id}", s.deleteAlbumHandler)
 
 	log.Println("API server running at", s.listenAddr)
 	log.Fatal(http.ListenAndServe(s.listenAddr, nil))
@@ -73,4 +74,23 @@ func (s *APIServer) postAlbumHandler(w http.ResponseWriter, r *http.Request) {
 	alb.ID = insertId
 
 	writeJson(w, http.StatusCreated, alb)
+}
+
+func (s *APIServer) deleteAlbumHandler(w http.ResponseWriter, r *http.Request) {
+	idString := r.PathValue("id")
+	id, err := strconv.ParseInt(idString, 10, 64)
+	if err != nil {
+		http.Error(w, "", http.StatusBadRequest)
+		return
+	}
+	rowsAffected, err := deleteAlbum(s.db, id)
+	if err != nil {
+		http.Error(w, "", http.StatusInternalServerError)
+		return
+	}
+	if rowsAffected == 0 {
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
+	writeJson(w, http.StatusNoContent, "")
 }
