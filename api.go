@@ -7,6 +7,9 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 func writeJson(w http.ResponseWriter, status int, val any) error {
@@ -20,12 +23,19 @@ type APIServer struct {
 	db         *sql.DB
 }
 
+type User struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
 func (s *APIServer) run() {
 	http.HandleFunc("GET /albums/", s.getAlbumsHandler)
 	http.HandleFunc("GET /albums/{id}", s.getAlbumHandler)
-	http.HandleFunc("POST /albums", s.postAlbumHandler)
-	http.HandleFunc("DELETE /albums/{id}", s.deleteAlbumHandler)
-	http.HandleFunc("PUT /albums/{id}", s.updateAlbumHandler)
+	http.HandleFunc("POST /albums", s.withJWTAuth(s.postAlbumHandler))
+	http.HandleFunc("DELETE /albums/{id}", s.withJWTAuth(s.deleteAlbumHandler))
+	http.HandleFunc("PUT /albums/{id}", s.withJWTAuth(s.updateAlbumHandler))
+
+	http.HandleFunc("POST /login", s.loginHandler)
 
 	log.Println("API server running at", s.listenAddr)
 	log.Fatal(http.ListenAndServe(s.listenAddr, nil))
@@ -142,4 +152,78 @@ func (s *APIServer) updateAlbumHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJson(w, http.StatusOK, updatedAlb)
+}
+
+func (s *APIServer) loginHandler(w http.ResponseWriter, r *http.Request) {
+	var u User
+	json.NewDecoder(r.Body).Decode(&u)
+
+	adminUser := viperEnvVariable("ADMIN_USER")
+	adminPass := viperEnvVariable("ADMIN_PASS")
+
+	if u.Username == adminUser && u.Password == adminPass {
+		tokenString, err := createToken(u.Username)
+		if err != nil {
+			fmt.Println(err)
+			http.Error(w, "", http.StatusInternalServerError)
+			return
+		}
+		writeJson(w, http.StatusOK, tokenString)
+		return
+	}
+	http.Error(w, "", http.StatusUnauthorized)
+}
+
+func createToken(username string) (string, error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256,
+		jwt.MapClaims{
+			"username": username,
+			"exp":      time.Now().Add(time.Hour * 24).Unix(),
+		})
+
+	jwtSecretKey := []byte(viperEnvVariable("JWT_SECRET_KEY"))
+
+	tokenString, err := token.SignedString(jwtSecretKey)
+	if err != nil {
+		return "", err
+	}
+	return tokenString, nil
+}
+
+func verifyToken(tokenString string) error {
+	jwtSecretKey := []byte(viperEnvVariable("JWT_SECRET_KEY"))
+	token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
+		return jwtSecretKey, nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	if !token.Valid {
+		return fmt.Errorf("invalid token")
+	}
+
+	return nil
+}
+
+func (s *APIServer) withJWTAuth(f http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		tokenString := r.Header.Get("Authorization")
+		if tokenString == "" {
+			http.Error(w, "Permission denied", http.StatusUnauthorized)
+			return
+		}
+
+		tokenString = tokenString[len("Bearer "):]
+
+		err := verifyToken(tokenString)
+		if err != nil {
+			log.Println(err)
+			http.Error(w, "Permission denied", http.StatusUnauthorized)
+			return
+		}
+
+		f(w, r)
+	}
 }
