@@ -168,7 +168,11 @@ func (s *APIServer) loginHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "", http.StatusInternalServerError)
 			return
 		}
-		writeJson(w, http.StatusOK, tokenString)
+		type loginResponse struct {
+			Token string `json:"token"`
+		}
+
+		writeJson(w, http.StatusOK, &loginResponse{Token: tokenString})
 		return
 	}
 	http.Error(w, "", http.StatusUnauthorized)
