@@ -37,6 +37,10 @@ func (s *APIServer) run() {
 
 	http.HandleFunc("POST /login", s.loginHandler)
 
+	// pass-through mockapi client
+	http.HandleFunc("GET /mockapi/products", s.getProductsHandler)
+	http.HandleFunc("GET /mockapi/products/{id}", s.getProductHandler)
+
 	log.Println("API server running at", s.listenAddr)
 	log.Fatal(http.ListenAndServe(s.listenAddr, nil))
 }
@@ -176,6 +180,40 @@ func (s *APIServer) loginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Error(w, "", http.StatusUnauthorized)
+}
+
+func (s *APIServer) getProductsHandler(w http.ResponseWriter, r *http.Request) {
+	// pass-through mockapi data
+	products, err := retrieveProducts()
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "", http.StatusInternalServerError)
+		return
+	}
+
+	writeJson(w, http.StatusOK, products)
+}
+
+func (s *APIServer) getProductHandler(w http.ResponseWriter, r *http.Request) {
+	idString := r.PathValue("id")
+	id, err := strconv.ParseInt(idString, 10, 64)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "", http.StatusBadRequest)
+		return
+	}
+
+	product, err := retrieveProduct(id)
+	if err != nil {
+		if err == ErrNotFound {
+			http.Error(w, "Not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "", http.StatusInternalServerError)
+		return
+	}
+
+	writeJson(w, http.StatusOK, product)
 }
 
 func createToken(username string) (string, error) {
