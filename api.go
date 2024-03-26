@@ -49,6 +49,7 @@ func (s *APIServer) getAlbumsHandler(w http.ResponseWriter, r *http.Request) {
 	// todo: pagination, filtering, ordering
 	albums, err := albums(s.db)
 	if err != nil {
+		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -68,6 +69,7 @@ func (s *APIServer) getAlbumHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Not found", http.StatusNotFound)
 			return
 		}
+		log.Println(err)
 		http.Error(w, "", http.StatusInternalServerError)
 		return
 	}

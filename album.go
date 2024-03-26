@@ -22,8 +22,12 @@ func albums(db *sql.DB) ([]Album, error) {
 
 	for rows.Next() {
 		var alb Album
-		if err := rows.Scan(&alb.ID, &alb.Title, &alb.Artist, &alb.Price); err != nil {
+		var p sql.NullFloat64
+		if err := rows.Scan(&alb.ID, &alb.Title, &alb.Artist, &p); err != nil {
 			return nil, err
+		}
+		if p.Valid {
+			alb.Price = float32(p.Float64)
 		}
 		albums = append(albums, alb)
 	}
@@ -35,10 +39,14 @@ func albums(db *sql.DB) ([]Album, error) {
 
 func albumByID(db *sql.DB, id int64) (Album, error) {
 	var alb Album
+	var p sql.NullFloat64
 
 	row := db.QueryRow("SELECT * FROM album WHERE id = $1", id)
-	if err := row.Scan(&alb.ID, &alb.Title, &alb.Artist, &alb.Price); err != nil {
+	if err := row.Scan(&alb.ID, &alb.Title, &alb.Artist, &p); err != nil {
 		return alb, err
+	}
+	if p.Valid {
+		alb.Price = float32(p.Float64)
 	}
 	return alb, nil
 }
