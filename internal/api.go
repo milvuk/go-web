@@ -161,14 +161,13 @@ func (s *APIServer) loginHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		writeJson(w, http.StatusOK, &loginResponse{Token: tokenString})
+		writeJson(w, http.StatusOK, &LoginResponse{Token: tokenString})
 		return
 	}
 	http.Error(w, "", http.StatusUnauthorized)
 }
 
 func (s *APIServer) getProductsHandler(w http.ResponseWriter, r *http.Request) {
-	// pass-through mockapi data
 	products, err := retrieveProducts()
 	if err != nil {
 		log.Println(err)

@@ -14,7 +14,7 @@ type User struct {
 	Password string `json:"password"`
 }
 
-type loginResponse struct {
+type LoginResponse struct {
 	Token string `json:"token"`
 }
 
