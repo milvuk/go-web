@@ -11,7 +11,7 @@ import (
 
 type APIServer struct {
 	ListenAddr string
-	DB         *sql.DB
+	Store      Storage
 }
 
 func (s *APIServer) Run() {
@@ -33,7 +33,7 @@ func (s *APIServer) Run() {
 
 func (s *APIServer) getAlbumsHandler(w http.ResponseWriter, r *http.Request) {
 	// todo: pagination, filtering, ordering
-	albums, err := albums(s.DB)
+	albums, err := s.Store.Albums()
 	if err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -49,7 +49,7 @@ func (s *APIServer) getAlbumHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "", http.StatusBadRequest)
 		return
 	}
-	album, err := albumByID(s.DB, id)
+	album, err := s.Store.AlbumByID(id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			http.Error(w, "Not found", http.StatusNotFound)
@@ -71,7 +71,7 @@ func (s *APIServer) postAlbumHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	insertId, err := addAlbum(s.DB, alb)
+	insertId, err := s.Store.AddAlbum(alb)
 	if err != nil {
 		http.Error(w, "", http.StatusInternalServerError)
 		return
@@ -80,7 +80,7 @@ func (s *APIServer) postAlbumHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Location", fmt.Sprintf("/albums/%d", insertId))
 
 	var createdAlb Album
-	createdAlb, err = albumByID(s.DB, insertId)
+	createdAlb, err = s.Store.AlbumByID(insertId)
 	if err != nil {
 		writeJson(w, http.StatusCreated, nil)
 		return
@@ -97,7 +97,7 @@ func (s *APIServer) deleteAlbumHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = deleteAlbum(s.DB, id)
+	err = s.Store.DeleteAlbum(id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			http.Error(w, "Not found", http.StatusNotFound)
@@ -126,7 +126,7 @@ func (s *APIServer) updateAlbumHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = updateAlbum(s.DB, id, alb)
+	err = s.Store.UpdateAlbum(id, alb)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			http.Error(w, "Not found", http.StatusNotFound)
@@ -137,7 +137,7 @@ func (s *APIServer) updateAlbumHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var updatedAlb Album
-	updatedAlb, err = albumByID(s.DB, id)
+	updatedAlb, err = s.Store.AlbumByID(id)
 	if err != nil {
 		writeJson(w, http.StatusOK, nil)
 		return

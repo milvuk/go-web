@@ -4,10 +4,29 @@ import (
 	"database/sql"
 )
 
-func albums(db *sql.DB) ([]Album, error) {
+type Storage interface {
+	Albums() ([]Album, error)
+	AlbumByID(int64) (Album, error)
+	AddAlbum(Album) (int64, error)
+	DeleteAlbum(int64) error
+	UpdateAlbum(int64, Album) error
+}
+
+type PostgresStore struct {
+	db *sql.DB
+}
+
+func NewPostgresStore() *PostgresStore {
+	db := GetDbHandle()
+	return &PostgresStore{
+		db: db,
+	}
+}
+
+func (s *PostgresStore) Albums() ([]Album, error) {
 	var albums []Album
 
-	rows, err := db.Query("SELECT * FROM album")
+	rows, err := s.db.Query("SELECT * FROM album")
 	if err != nil {
 		return nil, err
 	}
@@ -30,11 +49,11 @@ func albums(db *sql.DB) ([]Album, error) {
 	return albums, nil
 }
 
-func albumByID(db *sql.DB, id int64) (Album, error) {
+func (s *PostgresStore) AlbumByID(id int64) (Album, error) {
 	var alb Album
 	var p sql.NullFloat64
 
-	row := db.QueryRow("SELECT * FROM album WHERE id = $1", id)
+	row := s.db.QueryRow("SELECT * FROM album WHERE id = $1", id)
 	if err := row.Scan(&alb.ID, &alb.Title, &alb.Artist, &p); err != nil {
 		return alb, err
 	}
@@ -44,17 +63,17 @@ func albumByID(db *sql.DB, id int64) (Album, error) {
 	return alb, nil
 }
 
-func addAlbum(db *sql.DB, alb Album) (int64, error) {
+func (s *PostgresStore) AddAlbum(alb Album) (int64, error) {
 	var id int64
-	err := db.QueryRow("INSERT INTO album (title, artist, price) VALUES ($1, $2, $3) RETURNING id", alb.Title, alb.Artist, alb.Price).Scan(&id)
+	err := s.db.QueryRow("INSERT INTO album (title, artist, price) VALUES ($1, $2, $3) RETURNING id", alb.Title, alb.Artist, alb.Price).Scan(&id)
 	if err != nil {
 		return 0, err
 	}
 	return id, nil
 }
 
-func deleteAlbum(db *sql.DB, id int64) error {
-	res, err := db.Exec("DELETE FROM album WHERE id = $1", id)
+func (s *PostgresStore) DeleteAlbum(id int64) error {
+	res, err := s.db.Exec("DELETE FROM album WHERE id = $1", id)
 	if err != nil {
 		return err
 	}
@@ -70,8 +89,8 @@ func deleteAlbum(db *sql.DB, id int64) error {
 	return nil
 }
 
-func updateAlbum(db *sql.DB, id int64, alb Album) error {
-	res, err := db.Exec("UPDATE album SET title=$1, artist=$2, price=$3 WHERE id=$4",
+func (s *PostgresStore) UpdateAlbum(id int64, alb Album) error {
+	res, err := s.db.Exec("UPDATE album SET title=$1, artist=$2, price=$3 WHERE id=$4",
 		alb.Title, alb.Artist, alb.Price, id)
 	if err != nil {
 		return err

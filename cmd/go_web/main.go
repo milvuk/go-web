@@ -6,13 +6,12 @@ import (
 )
 
 func main() {
-	db := internal.GetDbHandle()
-
+	store := internal.NewPostgresStore()
 	listenAddr := internal.ViperEnvVariable("API_LISTEN_ADDR")
 
 	srv := internal.APIServer{
 		ListenAddr: listenAddr,
-		DB:         db,
+		Store:      store,
 	}
 
 	srv.Run()
