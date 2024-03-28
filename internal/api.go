@@ -9,20 +9,9 @@ import (
 	"strconv"
 )
 
-func writeJson(w http.ResponseWriter, status int, val any) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	return json.NewEncoder(w).Encode(val)
-}
-
 type APIServer struct {
 	ListenAddr string
 	DB         *sql.DB
-}
-
-type User struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
 }
 
 func (s *APIServer) Run() {
@@ -170,9 +159,6 @@ func (s *APIServer) loginHandler(w http.ResponseWriter, r *http.Request) {
 			fmt.Println(err)
 			http.Error(w, "", http.StatusInternalServerError)
 			return
-		}
-		type loginResponse struct {
-			Token string `json:"token"`
 		}
 
 		writeJson(w, http.StatusOK, &loginResponse{Token: tokenString})

@@ -2,8 +2,10 @@ package internal
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 
 	"github.com/spf13/viper"
 )
@@ -47,4 +49,10 @@ func GetDbHandle() *sql.DB {
 	}
 	log.Println("DB Connected!")
 	return db
+}
+
+func writeJson(w http.ResponseWriter, status int, val any) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	return json.NewEncoder(w).Encode(val)
 }

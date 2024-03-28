@@ -5,17 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
-	"time"
 )
-
-type Product struct {
-	ID                 int64     `json:"id,string"`
-	ProductName        string    `json:"productName"`
-	ProductDescription string    `json:"productDescription"`
-	Department         string    `json:"department"`
-	Price              float32   `json:"price,string"`
-	CreatedAt          time.Time `json:"createdAt"`
-}
 
 var ErrNotFound = errors.New("not found")
 
