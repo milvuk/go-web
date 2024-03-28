@@ -1,4 +1,4 @@
-package main
+package internal
 
 import (
 	"database/sql"
@@ -7,9 +7,6 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"time"
-
-	"github.com/golang-jwt/jwt/v5"
 )
 
 func writeJson(w http.ResponseWriter, status int, val any) error {
@@ -19,8 +16,8 @@ func writeJson(w http.ResponseWriter, status int, val any) error {
 }
 
 type APIServer struct {
-	listenAddr string
-	db         *sql.DB
+	ListenAddr string
+	DB         *sql.DB
 }
 
 type User struct {
@@ -28,7 +25,7 @@ type User struct {
 	Password string `json:"password"`
 }
 
-func (s *APIServer) run() {
+func (s *APIServer) Run() {
 	http.HandleFunc("GET /albums/", s.getAlbumsHandler)
 	http.HandleFunc("GET /albums/{id}", s.getAlbumHandler)
 	http.HandleFunc("POST /albums", s.withJWTAuth(s.postAlbumHandler))
@@ -41,13 +38,13 @@ func (s *APIServer) run() {
 	http.HandleFunc("GET /mockapi/products", s.getProductsHandler)
 	http.HandleFunc("GET /mockapi/products/{id}", s.getProductHandler)
 
-	log.Println("API server running at", s.listenAddr)
-	log.Fatal(http.ListenAndServe(s.listenAddr, nil))
+	log.Println("API server running at", s.ListenAddr)
+	log.Fatal(http.ListenAndServe(s.ListenAddr, nil))
 }
 
 func (s *APIServer) getAlbumsHandler(w http.ResponseWriter, r *http.Request) {
 	// todo: pagination, filtering, ordering
-	albums, err := albums(s.db)
+	albums, err := albums(s.DB)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -63,7 +60,7 @@ func (s *APIServer) getAlbumHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "", http.StatusBadRequest)
 		return
 	}
-	album, err := albumByID(s.db, id)
+	album, err := albumByID(s.DB, id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			http.Error(w, "Not found", http.StatusNotFound)
@@ -85,7 +82,7 @@ func (s *APIServer) postAlbumHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	insertId, err := addAlbum(s.db, alb)
+	insertId, err := addAlbum(s.DB, alb)
 	if err != nil {
 		http.Error(w, "", http.StatusInternalServerError)
 		return
@@ -94,7 +91,7 @@ func (s *APIServer) postAlbumHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Location", fmt.Sprintf("/albums/%d", insertId))
 
 	var createdAlb Album
-	createdAlb, err = albumByID(s.db, insertId)
+	createdAlb, err = albumByID(s.DB, insertId)
 	if err != nil {
 		writeJson(w, http.StatusCreated, nil)
 		return
@@ -111,7 +108,7 @@ func (s *APIServer) deleteAlbumHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = deleteAlbum(s.db, id)
+	err = deleteAlbum(s.DB, id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			http.Error(w, "Not found", http.StatusNotFound)
@@ -140,7 +137,7 @@ func (s *APIServer) updateAlbumHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = updateAlbum(s.db, id, alb)
+	err = updateAlbum(s.DB, id, alb)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			http.Error(w, "Not found", http.StatusNotFound)
@@ -151,7 +148,7 @@ func (s *APIServer) updateAlbumHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var updatedAlb Album
-	updatedAlb, err = albumByID(s.db, id)
+	updatedAlb, err = albumByID(s.DB, id)
 	if err != nil {
 		writeJson(w, http.StatusOK, nil)
 		return
@@ -164,8 +161,8 @@ func (s *APIServer) loginHandler(w http.ResponseWriter, r *http.Request) {
 	var u User
 	json.NewDecoder(r.Body).Decode(&u)
 
-	adminUser := viperEnvVariable("ADMIN_USER")
-	adminPass := viperEnvVariable("ADMIN_PASS")
+	adminUser := ViperEnvVariable("ADMIN_USER")
+	adminPass := ViperEnvVariable("ADMIN_PASS")
 
 	if u.Username == adminUser && u.Password == adminPass {
 		tokenString, err := createToken(u.Username)
@@ -216,39 +213,6 @@ func (s *APIServer) getProductHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJson(w, http.StatusOK, product)
-}
-
-func createToken(username string) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256,
-		jwt.MapClaims{
-			"username": username,
-			"exp":      time.Now().Add(time.Hour * 24).Unix(),
-		})
-
-	jwtSecretKey := []byte(viperEnvVariable("JWT_SECRET_KEY"))
-
-	tokenString, err := token.SignedString(jwtSecretKey)
-	if err != nil {
-		return "", err
-	}
-	return tokenString, nil
-}
-
-func verifyToken(tokenString string) error {
-	jwtSecretKey := []byte(viperEnvVariable("JWT_SECRET_KEY"))
-	token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
-		return jwtSecretKey, nil
-	})
-
-	if err != nil {
-		return err
-	}
-
-	if !token.Valid {
-		return fmt.Errorf("invalid token")
-	}
-
-	return nil
 }
 
 func (s *APIServer) withJWTAuth(f http.HandlerFunc) http.HandlerFunc {

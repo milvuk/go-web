@@ -1,15 +1,14 @@
-package main
+package internal
 
 import (
 	"database/sql"
 	"fmt"
 	"log"
 
-	_ "github.com/lib/pq"
 	"github.com/spf13/viper"
 )
 
-func viperEnvVariable(key string) string {
+func ViperEnvVariable(key string) string {
 	viper.SetConfigFile(".env")
 
 	err := viper.ReadInConfig()
@@ -25,12 +24,12 @@ func viperEnvVariable(key string) string {
 	return value
 }
 
-func getDbHandle() *sql.DB {
-	host := viperEnvVariable("DB_HOST")
-	port := viperEnvVariable("DB_PORT")
-	user := viperEnvVariable("DB_USER")
-	pass := viperEnvVariable("DB_PASS")
-	dbname := viperEnvVariable("DB_NAME")
+func GetDbHandle() *sql.DB {
+	host := ViperEnvVariable("DB_HOST")
+	port := ViperEnvVariable("DB_PORT")
+	user := ViperEnvVariable("DB_USER")
+	pass := ViperEnvVariable("DB_PASS")
+	dbname := ViperEnvVariable("DB_NAME")
 
 	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		host, port, user, pass, dbname)
@@ -48,17 +47,4 @@ func getDbHandle() *sql.DB {
 	}
 	log.Println("DB Connected!")
 	return db
-}
-
-func main() {
-	db := getDbHandle()
-
-	listenAddr := viperEnvVariable("API_LISTEN_ADDR")
-
-	srv := APIServer{
-		listenAddr: listenAddr,
-		db:         db,
-	}
-
-	srv.run()
 }

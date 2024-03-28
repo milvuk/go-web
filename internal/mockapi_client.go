@@ -1,4 +1,4 @@
-package main
+package internal
 
 import (
 	"encoding/json"
@@ -62,5 +62,5 @@ func retrieveProduct(id int64) (Product, error) {
 }
 
 func mockApiAddress() string {
-	return "https://" + viperEnvVariable("MOCKAPI_PROJECT_KEY") + ".mockapi.io/api/v1"
+	return "https://" + ViperEnvVariable("MOCKAPI_PROJECT_KEY") + ".mockapi.io/api/v1"
 }
