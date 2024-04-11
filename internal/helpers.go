@@ -33,8 +33,14 @@ func GetDbHandle() *sql.DB {
 	pass := ViperEnvVariable("DB_PASS")
 	dbname := ViperEnvVariable("DB_NAME")
 
-	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		host, port, user, pass, dbname)
+	passOption := ""
+
+	if pass != "" {
+		passOption = fmt.Sprintf(" password=%s ", pass)
+	}
+
+	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s %s dbname=%s sslmode=disable",
+		host, port, user, passOption, dbname)
 
 	var err error
 
